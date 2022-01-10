@@ -13,7 +13,7 @@ terraform {
 }
 
 data "external" "resource_1" {
-  program = ["python", "./naming.py", jsonencode(var.naming_config)]
+  program = ["python", "./naming.py", "standard", jsonencode(var.naming_config)]
   query = {
     resource = "lf"
     group = "app"
@@ -22,7 +22,7 @@ data "external" "resource_1" {
 }
 
 data "external" "resource_2" {
-  program = ["python", "./naming.py", jsonencode(var.naming_config)]
+  program = ["python", "./naming.py", "standard", jsonencode(var.naming_config)]
   query = {
     resource = "lf"
     group = "app"

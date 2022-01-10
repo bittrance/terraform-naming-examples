@@ -1,6 +1,6 @@
 variable "naming_config" {
     type = object({
-        template: string
+        template: map(any)
         query: map(any)
     })
 }

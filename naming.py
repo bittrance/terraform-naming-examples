@@ -2,12 +2,13 @@ import json
 import sys
 
 query = json.load(sys.stdin)
-input = json.loads(sys.argv[1])
+template_name = sys.argv[1]
+input = json.loads(sys.argv[2])
 query.update(input.get('query', {}))
 
 try:
     print(json.dumps({
-        "name": input["template"] % query
+        "name": input["template"][template_name] % query
     }))
 except KeyError as err:
     sys.stderr.write(
