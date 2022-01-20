@@ -96,15 +96,14 @@ The proof-of-concept should be properly implemented as a provider, but the actua
 
 ```hcl
 data "naming_provider" "sgname" {
-  template_name = "standard"
-  query = {
+  terms = {
     group = "bastion"
     resource = "sg"
   }
 }
 
 resource "aws_security_group" "sg" {
-  name = data.naming_provider.name
+  name = data.naming_provider.sgname.name
   # ...
 }
 ```
@@ -113,11 +112,29 @@ Invocation:
 
 ```hcl
 provider "naming_provider" {
-  templates = {
-    standard = "%(region)s-%(group)s-%(resource)s-%(unit)s"
-    bucketname = "%(group)s%(resource)s%(unit)s"
+  # Rules would be matched in the order they are listed
+  matching_rules = [
+    {
+      # The selectors are evaluated against the terms in the data source;
+      # if all selectors match, this template will be used to name the
+      # resource.
+      selectors = {
+        # The value can be a regex, so you can do "bucket|certificate|keyvault"
+        resource = "bucket"
+      },
+      # terms configured in the datasource and additional_terms below
+      # are available to the templating engine.
+      template = "%(group)s%(resource)s%(unit)s"
+    },
+    {
+      # An empty selector matches everything.
+      selectors = {},
+      template = = "%(region)s-%(group)s-%(resource)s-%(unit)s"
+    }
   }
-  query = {
+  # The additional_terms dictionary allows the template itself to be a
+  # variable.
+  additional_terms = {
     region = "we"
   }
 }
