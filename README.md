@@ -128,3 +128,99 @@ module "caller_1" {
 ```
 
 In order to have multiple naming provider configurations, you can use the [providers meta-argument](https://www.terraform.io/language/meta-arguments/module-provider.)
+
+## Possible strategies
+
+### Strategy "naming module"
+
+```hcl
+module "aws-resource-naming_lambda_role" {
+  source        = "github.com/traveloka/terraform-aws-resource-naming"
+  version       = "v0.17.1"
+  name_prefix   = "LambdaRole_DailyScheduler"
+  resource_type = "iam_role"
+}
+
+resource "aws_iam_role" "lambda_role" {
+  name        = "${module.aws-resource-naming_lambda_role.name}"
+  path        = "/lambda-role/"
+  description = "Lambda Role for Daily Scheduler"
+  # ...
+}
+```
+
+References:
+
+- https://github.com/traveloka/terraform-aws-resource-naming
+
+Cons:
+
+- each resource requires a module invocation section
+- caller will need to
+
+### Strategy: "prefix and suffix"
+
+```
+resource "aws_security_group" "sg" {
+  name = "${var.name_prefix}bastion${var.name_suffix}"
+  # ...
+}
+```
+
+Cons:
+
+- in practice, many modules will want to own more than one name component, such as app and resource type.
+
+### Strategy: "external provider"
+
+We could use Hashicorp's [external] provider and write a small tool that templates the name. The tool would read the "shared" parts of the configuration from an external configuration (presumably a `jsonencode`d string) and would read the resource-specifc parts from the data source's `query` block.
+
+```
+data "external" "sgname" {
+  program = ["./naming-templater", "--config", var.naming_config]
+  query = {
+    group = "bastion"
+    resource = "host"
+  }
+}
+
+resource "aws_security_group" "sg" {
+  name = data.external.sgname.result.name
+  # ...
+}
+```
+
+the `naming_config` value may look something like this:
+
+```json
+{
+  "template": {
+    "storageacount": "...",
+    "standard": "..."
+  }
+}
+```
+
+Cons:
+
+- non-obvious
+- annoying extra `result` in property
+- program is not run as a shell, so needs either to be prefixed by e.g. `bash` or to be a compiled (platform-dependent) binary; it might be desirable to use a variable and construct the list in one place for the module.
+
+### Strategy: "naming provider"
+
+The "external provider" approach could be formalized as a provider.
+
+```
+provider "name_templater" {
+
+}
+
+resource "templated_name" "sgname" {
+
+}
+```
+
+Cons:
+
+- every resource needs a "naming resource"
